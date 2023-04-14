@@ -1,0 +1,98 @@
+// SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
+// SPDX-License-Identifier: GPL-3.0-only
+
+import { Button, TabWidget , ListView} from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    preferred-height: 600px;
+    preferred-width: 900px;
+    default-font-size: 16px;
+
+    in-out property <string> view: "select-drive";
+    in-out property <[string]> drives: ["Placeholder1", "Placeholder2", "Placeholder3"];
+    in-out property <string> drive-path: "";
+    in-out property <[string]> games: [];
+    in-out property <int> current-progress: 0;
+    in-out property <int> max-progress: 0;
+    callback open-drive(string);
+    callback add-games();
+    callback remove-game(string);
+
+    if view == "select-drive" : select-drive-view := VerticalLayout {
+        alignment: center;
+        spacing: 8px;
+
+        HorizontalLayout {
+            alignment: center;
+
+            Text {
+                text: "Select a drive";
+                font-size: 32px;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            spacing: 8px;
+
+            for drive in drives : Button {
+                text: drive;
+                clicked => {
+                    open-drive(drive);
+                }
+            }
+        }
+    }
+
+    if view == "games" : games-view := VerticalLayout {
+        padding: 8px;
+
+        ListView {
+            for game in games : Rectangle {
+                border-color: #a7a7a7;
+                border-width: 1px;
+                border-radius: 8px;
+                padding: 8px;
+
+                HorizontalLayout {
+                    padding: 8px;
+
+                    Text {
+                        text: game;
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        text: "Remove";
+                        horizontal-stretch: 0;
+                        clicked => {
+                            remove-game(game);
+                        }
+                    }
+                }
+            }
+        }
+        HorizontalLayout {
+            alignment: end;
+
+            Button {
+                text: "Add game(s)";
+                clicked => {
+                    add-games();
+                }
+            }
+        }
+    }
+
+    if view == "adding-games" : adding-games-view := VerticalLayout {
+        alignment: center;
+        spacing: 8px;
+
+        HorizontalLayout {
+            alignment: center;
+
+            Text {
+                text: "Adding game " + current-progress + "/" + max-progress;
+                font-size: 32px;
+            }
+        }
+    }
+}
