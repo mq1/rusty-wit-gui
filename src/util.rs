@@ -5,8 +5,9 @@ use crate::Drive;
 
 use std::{
     fs::{self, Permissions},
+    os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
-    process::Command, os::unix::prelude::PermissionsExt,
+    process::Command,
 };
 
 use regex::Regex;
@@ -41,6 +42,27 @@ pub fn list_drives() -> ModelRc<Drive> {
         .collect::<Vec<_>>();
 
     VecModel::from_slice(&drives)
+}
+
+pub fn refresh_drive(drive: Drive) -> Drive {
+    let mut sys = System::new();
+    sys.refresh_disks_list();
+
+    let disk = sys
+        .disks()
+        .iter()
+        .find(|disk| disk.mount_point().to_string_lossy().to_string() == drive.path.to_string())
+        .unwrap();
+
+    let total_space_gib = disk.total_space() as f32 / 1024. / 1024. / 1024.;
+    let available_space_gib = disk.available_space() as f32 / 1024. / 1024. / 1024.;
+
+    Drive {
+        name: drive.name,
+        total_space: format!("{:.2} GiB", total_space_gib).into(),
+        available_space: format!("{:.2} GiB", available_space_gib).into(),
+        path: drive.path,
+    }
 }
 
 pub fn format_drive(drive: &Drive) {

@@ -65,6 +65,9 @@ fn main() -> Result<(), slint::PlatformError> {
             handle_weak
                 .upgrade_in_event_loop(move |handle_weak| {
                     let games = util::get_games(&drive.path);
+                    let drive = util::refresh_drive(drive);
+
+                    handle_weak.set_selected_drive(drive);
                     handle_weak.set_view("games".into());
                     handle_weak.set_games(games);
                 })
@@ -78,6 +81,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let drive = ui.get_selected_drive();
 
         let games = util::remove_game(&drive.path, &game);
+        let drive = util::refresh_drive(drive);
+
+        ui.set_selected_drive(drive);
         ui.set_games(games);
     });
 
