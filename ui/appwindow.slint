@@ -15,7 +15,7 @@ export component AppWindow inherits Window {
     in-out property <int> current-progress: 0;
     in-out property <int> max-progress: 0;
     callback open-drive(string);
-    callback add-games();
+    callback add-games(string);
     callback remove-game(string);
 
     if view == "select-drive" : select-drive-view := VerticalLayout {
@@ -76,7 +76,7 @@ export component AppWindow inherits Window {
             Button {
                 text: "Add game(s)";
                 clicked => {
-                    add-games();
+                    add-games(drive-path);
                 }
             }
         }
