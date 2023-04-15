@@ -5,8 +5,8 @@ import { Button, TabWidget , ListView} from "std-widgets.slint";
 
 export struct Drive {
     name: string,
-    total_space: float,
-    available_space: float,
+    total_space: string,
+    available_space: string,
     path: string,
 }
 
@@ -42,7 +42,7 @@ export component AppWindow inherits Window {
             spacing: 8px;
 
             for drive in drives : Button {
-                text: drive.name + " (" + drive.available_space + " / " + drive.total_space + " GiB)";
+                text: drive.name + " (" + drive.available_space + " / " + drive.total_space + ")";
                 clicked => {
                     open-drive(drive);
                 }
@@ -87,7 +87,7 @@ export component AppWindow inherits Window {
             alignment: space-between;
 
             Text {
-                text: "Using " + selected-drive.available_space + " / " + selected-drive.total_space + " GiB";
+                text: "Using " + selected-drive.available_space + " / " + selected-drive.total_space;
             }
 
             Button {

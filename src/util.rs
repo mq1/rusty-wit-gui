@@ -29,8 +29,8 @@ pub fn list_drives() -> ModelRc<Drive> {
 
             Drive {
                 name: name.into(),
-                total_space: (total_space_gib * 100.).round() / 100.,
-                available_space: (available_space_gib * 100.).round() / 100.,
+                total_space: format!("{:.2} GiB", total_space_gib).into(),
+                available_space: format!("{:.2} GiB", available_space_gib).into(),
                 path: path.into(),
             }
         })
