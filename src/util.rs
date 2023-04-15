@@ -4,14 +4,18 @@
 use crate::Drive;
 
 use std::{
-    fs,
+    fs::{self, Permissions},
     path::{Path, PathBuf},
-    process::Command,
+    process::Command, os::unix::prelude::PermissionsExt,
 };
 
+use regex::Regex;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
 use slint::{ModelRc, SharedString, VecModel};
 use sysinfo::{DiskExt, System, SystemExt};
+use tempfile::NamedTempFile;
+
+const ASKPASS: &str = include_str!("../data/sudo-askpass.osascript-en.js");
 
 pub fn list_drives() -> ModelRc<Drive> {
     let mut sys = System::new();
@@ -37,6 +41,68 @@ pub fn list_drives() -> ModelRc<Drive> {
         .collect::<Vec<_>>();
 
     VecModel::from_slice(&drives)
+}
+
+pub fn format_drive(drive: &Drive) {
+    let yes = MessageDialog::new()
+        .set_title("Format drive")
+        .set_description(&format!(
+            "Are you sure you want to format {} ({})?\nThis will erase all data on the drive.\nThe drive will be formatted as FAT32 with the name WII.",
+            drive.name, drive.path
+        ))
+        .set_buttons(MessageButtons::OkCancel)
+        .show();
+
+    if yes {
+        if cfg!(target_os = "macos") {
+            let output = Command::new("diskutil")
+                .arg("umount")
+                .arg(drive.path.to_string())
+                .output()
+                .unwrap();
+            println!("{:?}", output);
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let re = Regex::new("Volume .+ on (.+) unmounted").unwrap();
+            let caps = re.captures(&stdout).unwrap();
+            let disk = caps.get(1).unwrap().as_str();
+
+            // This is a hack to get sudo to work on macOS
+            let file = NamedTempFile::new().unwrap();
+            fs::write(file.path(), ASKPASS).unwrap();
+            let permissions = Permissions::from_mode(0o700);
+            fs::set_permissions(file.path(), permissions).unwrap();
+
+            let output = Command::new("sudo")
+                .arg("--askpass")
+                .arg("newfs_msdos")
+                .arg("-F")
+                .arg("32")
+                .arg("-b")
+                .arg("32768")
+                .arg("-v")
+                .arg("WII")
+                .arg(format!("/dev/{disk}"))
+                .env("SUDO_ASKPASS", file.path().to_string_lossy().to_string())
+                .output()
+                .unwrap();
+            println!("{:?}", output);
+
+            fs::remove_file(file.path()).unwrap();
+
+            let output = Command::new("diskutil")
+                .arg("mount")
+                .arg(disk)
+                .output()
+                .unwrap();
+            println!("{:?}", output);
+        } else {
+            MessageDialog::new()
+                .set_title("Not implemented")
+                .set_description("This feature is only available on macOS")
+                .show();
+        }
+    }
 }
 
 pub fn get_games(drive_path: &str) -> ModelRc<SharedString> {

@@ -27,6 +27,15 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_format_drive(move |drive| {
+        let ui = ui_handle.unwrap();
+        util::format_drive(&drive);
+
+        let drives = util::list_drives();
+        ui.set_drives(drives);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_add_games(move |drive| {
         let ui_handle = ui_handle.clone();
 
