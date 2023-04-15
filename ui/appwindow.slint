@@ -25,29 +25,47 @@ export component AppWindow inherits Window {
     in-out property <int> current-progress: 0;
     in-out property <int> max-progress: 0;
     callback open-drive(Drive);
+    callback format-drive(Drive);
     callback add-games(Drive);
     callback remove-game(string);
 
     if view == "select-drive" : select-drive-view := VerticalLayout {
-        alignment: center;
+        padding: 8px;
         spacing: 8px;
 
-        HorizontalLayout {
-            alignment: center;
-
-            Text {
-                text: "Select a drive";
-                font-size: 32px;
-            }
+        Text {
+            text: "Select a drive";
+            font-size: 32px;
         }
-        HorizontalLayout {
-            alignment: center;
-            spacing: 8px;
+        ListView {
+            for drive in drives : Rectangle {
+                border-color: #a7a7a7;
+                border-width: 1px;
+                border-radius: 8px;
+                padding: 8px;
 
-            for drive in drives : Button {
-                text: drive.name + " (" + drive.available_space + " / " + drive.total_space + ")";
-                clicked => {
-                    open-drive(drive);
+                HorizontalLayout {
+                    padding: 8px;
+                    spacing: 8px;
+
+                    Text {
+                        text: drive.name + " (" + drive.available_space + " / " + drive.total_space + ")";
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        text: "Format";
+                        horizontal-stretch: 0;
+                        clicked => {
+                            format-drive(drive);
+                        }
+                    }
+                    Button {
+                        text: "Open";
+                        horizontal-stretch: 0;
+                        clicked => {
+                            open-drive(drive);
+                        }
+                    }
                 }
             }
         }
