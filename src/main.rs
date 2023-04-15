@@ -10,6 +10,9 @@ slint::include_modules!();
 fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
 
+    let window_title = env!("CARGO_PKG_NAME").to_owned() + " v" + env!("CARGO_PKG_VERSION");
+    ui.set_title_(window_title.into());
+
     let drives = util::list_drives();
     ui.set_drives(drives);
 

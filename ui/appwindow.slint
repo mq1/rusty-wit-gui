@@ -15,6 +15,9 @@ export component AppWindow inherits Window {
     preferred-width: 900px;
     default-font-size: 16px;
 
+    in-out property <string> title_;
+    title: title_;
+
     in-out property <string> view: "select-drive";
     in-out property <[Drive]> drives: [];
     in-out property <Drive> selected-drive;
