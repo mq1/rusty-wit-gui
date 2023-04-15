@@ -3,19 +3,24 @@
 
 import { Button, TabWidget , ListView} from "std-widgets.slint";
 
+export struct Drive {
+    label: string,
+    path: string,
+}
+
 export component AppWindow inherits Window {
     preferred-height: 600px;
     preferred-width: 900px;
     default-font-size: 16px;
 
     in-out property <string> view: "select-drive";
-    in-out property <[string]> drives: ["Placeholder1", "Placeholder2", "Placeholder3"];
-    in-out property <string> drive-path: "";
+    in-out property <[Drive]> drives: [];
+    in-out property <Drive> selected-drive;
     in-out property <[string]> games: [];
     in-out property <int> current-progress: 0;
     in-out property <int> max-progress: 0;
-    callback open-drive(string);
-    callback add-games(string);
+    callback open-drive(Drive);
+    callback add-games(Drive);
     callback remove-game(string);
 
     if view == "select-drive" : select-drive-view := VerticalLayout {
@@ -35,7 +40,7 @@ export component AppWindow inherits Window {
             spacing: 8px;
 
             for drive in drives : Button {
-                text: drive;
+                text: drive.label;
                 clicked => {
                     open-drive(drive);
                 }
@@ -45,6 +50,12 @@ export component AppWindow inherits Window {
 
     if view == "games" : games-view := VerticalLayout {
         padding: 8px;
+        spacing: 8px;
+
+        Text {
+            text: "Games on " + selected-drive.label;
+            font-size: 32px;
+        }
 
         ListView {
             for game in games : Rectangle {
@@ -76,7 +87,7 @@ export component AppWindow inherits Window {
             Button {
                 text: "Add game(s)";
                 clicked => {
-                    add-games(drive-path);
+                    add-games(selected-drive);
                 }
             }
         }

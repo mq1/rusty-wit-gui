@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use crate::Drive;
+
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -9,30 +11,29 @@ use std::{
 
 use rfd::{FileDialog, MessageButtons, MessageDialog};
 use slint::{ModelRc, SharedString, VecModel};
+use sysinfo::{DiskExt, System, SystemExt};
 
-pub fn list_drives() -> ModelRc<SharedString> {
-    let mut drives = Vec::new();
+pub fn list_drives() -> ModelRc<Drive> {
+    let mut sys = System::new();
+    sys.refresh_disks_list();
 
-    // macos only
-    if cfg!(target_os = "macos") {
-        drives = fs::read_dir("/Volumes")
-            .unwrap()
-            .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
-            .filter(|file| file != "Macintosh HD")
-            .map(|file| file.into())
-            .collect::<Vec<SharedString>>();
-    }
+    let drives = sys
+        .disks()
+        .iter()
+        .filter(|disk| disk.is_removable())
+        .map(|disk| {
+            let name = disk.name().to_string_lossy();
+            let total_space_gib = disk.total_space() / 1024 / 1024 / 1024;
+            let path = disk.mount_point().to_string_lossy().to_string();
+
+            Drive {
+                label: format!("{} ({:.2} GiB)", name, total_space_gib).into(),
+                path: path.into(),
+            }
+        })
+        .collect::<Vec<_>>();
 
     VecModel::from_slice(&drives)
-}
-
-pub fn open_folder(drive_name: &str) -> SharedString {
-    if cfg!(target_os = "macos") {
-        let path = Path::new("/Volumes").join(drive_name);
-        return path.to_string_lossy().to_string().into();
-    } else {
-        SharedString::new()
-    }
 }
 
 pub fn get_games(drive_path: &str) -> ModelRc<SharedString> {
