@@ -22,12 +22,15 @@ pub fn list_drives() -> ModelRc<Drive> {
         .iter()
         .filter(|disk| disk.is_removable())
         .map(|disk| {
-            let name = disk.name().to_string_lossy();
-            let total_space_gib = disk.total_space() / 1024 / 1024 / 1024;
+            let name = disk.name().to_string_lossy().to_string();
+            let total_space_gib = (disk.total_space() / 1024 / 1024 / 1024) as i32;
+            let available_space_gib = (disk.available_space() / 1024 / 1024 / 1024) as i32;
             let path = disk.mount_point().to_string_lossy().to_string();
 
             Drive {
-                label: format!("{} ({:.2} GiB)", name, total_space_gib).into(),
+                name: name.into(),
+                total_space: total_space_gib,
+                available_space: available_space_gib.into(),
                 path: path.into(),
             }
         })

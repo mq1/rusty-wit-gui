@@ -4,7 +4,9 @@
 import { Button, TabWidget , ListView} from "std-widgets.slint";
 
 export struct Drive {
-    label: string,
+    name: string,
+    total_space: int,
+    available_space: int,
     path: string,
 }
 
@@ -40,7 +42,7 @@ export component AppWindow inherits Window {
             spacing: 8px;
 
             for drive in drives : Button {
-                text: drive.label;
+                text: drive.name + " (" + drive.available_space + " / " + drive.total_space + " GiB)";
                 clicked => {
                     open-drive(drive);
                 }
@@ -53,7 +55,7 @@ export component AppWindow inherits Window {
         spacing: 8px;
 
         Text {
-            text: "Games on " + selected-drive.label;
+            text: "Games on " + selected-drive.name;
             font-size: 32px;
         }
 
@@ -82,7 +84,11 @@ export component AppWindow inherits Window {
             }
         }
         HorizontalLayout {
-            alignment: end;
+            alignment: space-between;
+
+            Text {
+                text: "Using " + selected-drive.available_space + " / " + selected-drive.total_space + " GiB";
+            }
 
             Button {
                 text: "Add game(s)";
