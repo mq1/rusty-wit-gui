@@ -3,11 +3,13 @@
 
 use std::thread;
 
+use anyhow::Result;
+
 mod util;
 
 slint::include_modules!();
 
-fn main() -> Result<(), slint::PlatformError> {
+fn main() -> Result<()> {
     let ui = AppWindow::new()?;
 
     let window_title = env!("CARGO_PKG_NAME").to_owned() + " v" + env!("CARGO_PKG_VERSION");
@@ -21,7 +23,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let ui = ui_handle.unwrap();
         let games = util::get_games(&drive.path);
 
-        ui.set_games(games);
+        ui.set_games(games.unwrap());
         ui.set_selected_drive(drive);
         ui.set_view("games".into());
     });
@@ -29,7 +31,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui_handle = ui.as_weak();
     ui.on_format_drive(move |drive| {
         let ui = ui_handle.unwrap();
-        util::format_drive(&drive);
+        util::format_drive(&drive).unwrap();
 
         let drives = util::list_drives();
         ui.set_drives(drives);
@@ -58,7 +60,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         handle_weak.set_current_progress(i as i32 + 1);
                     })
                     .unwrap();
-                util::add_game(&drive.path, &game);
+                util::add_game(&drive.path, &game).unwrap();
             }
 
             let handle_weak = ui_handle.clone();
@@ -67,9 +69,9 @@ fn main() -> Result<(), slint::PlatformError> {
                     let games = util::get_games(&drive.path);
                     let drive = util::refresh_drive(drive);
 
-                    handle_weak.set_selected_drive(drive);
+                    handle_weak.set_selected_drive(drive.unwrap());
                     handle_weak.set_view("games".into());
-                    handle_weak.set_games(games);
+                    handle_weak.set_games(games.unwrap());
                 })
                 .unwrap();
         });
@@ -83,9 +85,10 @@ fn main() -> Result<(), slint::PlatformError> {
         let games = util::remove_game(&drive.path, &game);
         let drive = util::refresh_drive(drive);
 
-        ui.set_selected_drive(drive);
-        ui.set_games(games);
+        ui.set_selected_drive(drive.unwrap());
+        ui.set_games(games.unwrap());
     });
 
-    ui.run()
+    ui.run()?;
+    Ok(())
 }
