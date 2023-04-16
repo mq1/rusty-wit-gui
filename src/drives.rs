@@ -66,16 +66,13 @@ pub fn list() -> Result<ModelRc<Drive>> {
 
                 let diskutil_info: DiskutilInfo = plist::from_bytes(&output.stdout)?;
 
-                let total_space = format!("{:.2}", partition.size as f32 / 1024. / 1024. / 1024.);
-                let available_space = format!(
-                    "{:.2}",
-                    diskutil_info.free_space as f32 / 1024. / 1024. / 1024.
-                );
+                let total_space = format!("{:.2}", partition.size as f32 / 1073741824.);
+                let free_space = format!("{:.2}", diskutil_info.free_space as f32 / 1073741824.);
 
                 drives.push(Drive {
                     name: partition.volume_name.into(),
                     total_space: total_space.into(),
-                    available_space: available_space.into(),
+                    available_space: free_space.into(),
                     path: PathBuf::from(format!("/dev/{}", partition.device_identifier))
                         .to_string_lossy()
                         .to_string()
