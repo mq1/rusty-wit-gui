@@ -8,6 +8,7 @@ export struct Drive {
     total_space: string,
     available_space: string,
     path: string,
+    mount_point: string,
 }
 
 export component AppWindow inherits Window {
@@ -49,7 +50,7 @@ export component AppWindow inherits Window {
                     spacing: 8px;
 
                     Text {
-                        text: drive.name + " (" + drive.available_space + " / " + drive.total_space + ")";
+                        text: drive.name + " (" + drive.available_space + " / " + drive.total_space + " GiB)";
                         horizontal-stretch: 1;
                     }
                     Button {
@@ -108,7 +109,7 @@ export component AppWindow inherits Window {
             alignment: space-between;
 
             Text {
-                text: "Using " + selected-drive.available_space + " / " + selected-drive.total_space;
+                text: "Using " + selected-drive.available_space + " / " + selected-drive.total_space + " GiB";
             }
 
             Button {

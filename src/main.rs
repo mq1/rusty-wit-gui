@@ -6,6 +6,7 @@ use std::thread;
 use anyhow::Result;
 
 mod util;
+mod drives;
 
 slint::include_modules!();
 
@@ -15,13 +16,13 @@ fn main() -> Result<()> {
     let window_title = env!("CARGO_PKG_NAME").to_owned() + " v" + env!("CARGO_PKG_VERSION");
     ui.set_title_(window_title.into());
 
-    let drives = util::list_drives();
+    let drives = drives::list()?;
     ui.set_drives(drives);
 
     let ui_handle = ui.as_weak();
     ui.on_open_drive(move |drive| {
         let ui = ui_handle.unwrap();
-        let games = util::get_games(&drive.path);
+        let games = util::get_games(&drive.mount_point);
 
         ui.set_games(games.unwrap());
         ui.set_selected_drive(drive);
@@ -31,9 +32,9 @@ fn main() -> Result<()> {
     let ui_handle = ui.as_weak();
     ui.on_format_drive(move |drive| {
         let ui = ui_handle.unwrap();
-        util::format_drive(&drive).unwrap();
+        drives::format(&drive).unwrap();
 
-        let drives = util::list_drives();
+        let drives = drives::list().unwrap();
         ui.set_drives(drives);
     });
 
@@ -66,12 +67,12 @@ fn main() -> Result<()> {
             let handle_weak = ui_handle.clone();
             handle_weak
                 .upgrade_in_event_loop(move |handle_weak| {
-                    let games = util::get_games(&drive.path);
-                    let drive = util::refresh_drive(drive);
+                    let games = util::get_games(&drive.path).unwrap();
+                    let drive = drives::refresh(drive).unwrap();
 
-                    handle_weak.set_selected_drive(drive.unwrap());
+                    handle_weak.set_selected_drive(drive);
                     handle_weak.set_view("games".into());
-                    handle_weak.set_games(games.unwrap());
+                    handle_weak.set_games(games);
                 })
                 .unwrap();
         });
@@ -82,11 +83,11 @@ fn main() -> Result<()> {
         let ui = ui_handle.unwrap();
         let drive = ui.get_selected_drive();
 
-        let games = util::remove_game(&drive.path, &game);
-        let drive = util::refresh_drive(drive);
+        let games = util::remove_game(&drive.path, &game).unwrap();
+        let drive = drives::refresh(drive).unwrap();
 
-        ui.set_selected_drive(drive.unwrap());
-        ui.set_games(games.unwrap());
+        ui.set_selected_drive(drive);
+        ui.set_games(games);
     });
 
     ui.run()?;
