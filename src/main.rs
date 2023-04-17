@@ -61,13 +61,13 @@ fn main() -> Result<()> {
                         handle_weak.set_current_progress(i as i32 + 1);
                     })
                     .unwrap();
-                util::add_game(&drive.path, &game).unwrap();
+                util::add_game(&drive.mount_point, &game).unwrap();
             }
 
             let handle_weak = ui_handle.clone();
             handle_weak
                 .upgrade_in_event_loop(move |handle_weak| {
-                    let games = util::get_games(&drive.path).unwrap();
+                    let games = util::get_games(&drive.mount_point).unwrap();
                     let drive = drives::refresh(drive).unwrap();
 
                     handle_weak.set_selected_drive(drive);
@@ -83,7 +83,7 @@ fn main() -> Result<()> {
         let ui = ui_handle.unwrap();
         let drive = ui.get_selected_drive();
 
-        let games = util::remove_game(&drive.path, &game).unwrap();
+        let games = util::remove_game(&drive.mount_point, &game).unwrap();
         let drive = drives::refresh(drive).unwrap();
 
         ui.set_selected_drive(drive);
