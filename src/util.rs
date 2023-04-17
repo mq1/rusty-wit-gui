@@ -75,6 +75,7 @@ pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
         .arg("copy")
         .arg(&game)
         .arg(&path)
+        .arg("--auto-split")
         .output()?;
     println!("{:?}", output);
 
