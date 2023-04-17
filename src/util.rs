@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use crate::Game;
+
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -8,26 +10,47 @@ use std::{
 };
 
 use anyhow::Result;
+use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
-use slint::{ModelRc, SharedString, VecModel};
+use slint::{ModelRc, VecModel};
 
-pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<SharedString>> {
+pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
     let wbfs_folder = Path::new(drive_mount_point).join("wbfs");
     if !wbfs_folder.exists() {
         fs::create_dir(&wbfs_folder)?;
     }
 
-    let files = fs::read_dir(&wbfs_folder)?
-        .map(|entry| Ok(entry?.file_name().to_string_lossy().to_string()))
-        .filter(|file| {
-            file.as_ref()
-                .map(|file| file.ends_with(".wbfs"))
-                .unwrap_or(false)
-        })
-        .map(|file| file.map(|file| file.into()))
-        .collect::<Result<Vec<SharedString>>>()?;
+    let output = Command::new("wit")
+        .arg("list")
+        .arg(wbfs_folder)
+        .arg("--sections")
+        .output()?;
+    println!("{:?}", output);
 
-    Ok(VecModel::from_slice(&files))
+    let output = String::from_utf8(output.stdout)?;
+    let list = Ini::load_from_str(&output)?;
+
+    let mut games = Vec::new();
+    for (section, properties) in list.iter() {
+        if let Some(section) = section {
+            if section != "summary" {
+                let game = Game {
+                    id: properties.get("id").unwrap().to_string().into(),
+                    title: properties.get("title").unwrap().to_string().into(),
+                    size: format!(
+                        "{:.2}",
+                        properties.get("size").unwrap().parse::<f32>().unwrap() / 1073741824.
+                    )
+                    .into(),
+                    path: properties.get("filename").unwrap().to_string().into(),
+                };
+
+                games.push(game);
+            }
+        }
+    }
+
+    Ok(VecModel::from_slice(&games))
 }
 
 fn get_titles(drive_mount_point: &str) -> Result<()> {
@@ -89,18 +112,15 @@ pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn remove_game(drive_mount_point: &str, game: &str) -> Result<ModelRc<SharedString>> {
+pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>> {
     let yes = MessageDialog::new()
         .set_title("Remove Game")
-        .set_description(&format!("Are you sure you want to remove {game}?"))
+        .set_description(&format!("Are you sure you want to remove {}?", game.title))
         .set_buttons(MessageButtons::OkCancel)
         .show();
 
     if yes {
-        let wbfs_folder = Path::new(drive_mount_point).join("wbfs");
-        let game_path = wbfs_folder.join(game);
-
-        fs::remove_file(game_path)?;
+        fs::remove_file(game.path.as_str())?;
     }
 
     get_games(drive_mount_point)

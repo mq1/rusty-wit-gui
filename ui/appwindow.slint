@@ -11,6 +11,13 @@ export struct Drive {
     mount_point: string,
 }
 
+export struct Game {
+    id: string,
+    title: string,
+    size: string,
+    path: string,
+}
+
 export component AppWindow inherits Window {
     preferred-height: 600px;
     preferred-width: 900px;
@@ -22,13 +29,13 @@ export component AppWindow inherits Window {
     in-out property <string> view: "select-drive";
     in-out property <[Drive]> drives: [];
     in-out property <Drive> selected-drive;
-    in-out property <[string]> games: [];
+    in-out property <[Game]> games: [];
     in-out property <int> current-progress: 0;
     in-out property <int> max-progress: 0;
     callback open-drive(Drive);
     callback format-drive(Drive);
     callback add-games(Drive);
-    callback remove-game(string);
+    callback remove-game(Game);
 
     if view == "select-drive" : select-drive-view := VerticalLayout {
         padding: 8px;
@@ -92,7 +99,7 @@ export component AppWindow inherits Window {
                     padding: 8px;
 
                     Text {
-                        text: game;
+                        text: game.id + ": " + game.title + " (" + game.size + " GiB)";
                         horizontal-stretch: 1;
                     }
                     Button {

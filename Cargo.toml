@@ -16,6 +16,7 @@ tempfile = "3"
 serde = { version = "1.0", features = ["derive"] }
 plist = "1"
 sysinfo = "0.28"
+rust-ini = "0.18"
 
 [build-dependencies]
 slint-build = "1.0"
