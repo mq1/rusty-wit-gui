@@ -8,18 +8,11 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use rfd::{MessageButtons, MessageDialog};
-use serde::Deserialize;
 use slint::{Model, ModelRc, VecModel};
 use sysinfo::{DiskExt, System, SystemExt};
 use tempfile::NamedTempFile;
 
 const ASKPASS: &str = include_str!("../data/sudo-askpass.osascript-en.js");
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct DiskutilInfo {
-    device_node: String,
-}
 
 pub fn list() -> Result<ModelRc<Drive>> {
     let mut sys = System::new();
@@ -43,9 +36,15 @@ pub fn list() -> Result<ModelRc<Drive>> {
                     .output()
                     .expect("Failed to execute diskutil");
 
-                let info: DiskutilInfo = plist::from_bytes(&output.stdout).unwrap();
+                let output = plist::from_bytes::<plist::Value>(&output.stdout)
+                    .expect("Failed to parse plist");
 
-                info.device_node
+                let device_node = output
+                    .as_dictionary()
+                    .and_then(|dict| dict.get("DeviceNode"))
+                    .and_then(|node| node.as_string());
+
+                device_node.unwrap().to_string()
             } else {
                 mount_point.clone()
             };

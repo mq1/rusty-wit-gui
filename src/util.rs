@@ -53,20 +53,6 @@ pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
     Ok(VecModel::from_slice(&games))
 }
 
-fn get_titles(drive_mount_point: &str) -> Result<()> {
-    let titles_path = Path::new(drive_mount_point).join("titles.txt");
-
-    if !titles_path.exists() {
-        let titles = ureq::get("https://gametdb.com/titles.txt")
-            .call()?
-            .into_string()?;
-
-        fs::write(&titles_path, titles)?;
-    }
-
-    Ok(())
-}
-
 pub fn select_games() -> Vec<PathBuf> {
     let games = FileDialog::new().add_filter("ISO", &["iso"]).pick_files();
 
@@ -77,37 +63,20 @@ pub fn select_games() -> Vec<PathBuf> {
 }
 
 pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
-    let wbfs_folder = Path::new(drive_mount_point).join("wbfs");
-    let titles_path = Path::new(drive_mount_point).join("titles.txt");
-
-    get_titles(drive_mount_point)?;
-
     let output = Command::new("wit").arg("id6").arg(&game).output()?;
     let game_id = String::from_utf8(output.stdout)?.trim().to_string();
 
-    for line in fs::read_to_string(&titles_path)?.lines() {
-        let parts = line.split(" = ").collect::<Vec<_>>();
-        let id = parts[0];
-        let title = parts[1];
+    let path = Path::new(drive_mount_point)
+        .join("wbfs")
+        .join(game_id)
+        .with_extension("wbfs");
 
-        if id == &game_id {
-            let game_name = format!("{title} [{id}].wbfs");
-            let game_path = wbfs_folder.join(&game_name);
-
-            let output = Command::new("wit")
-                .arg("copy")
-                .arg(&game)
-                .arg(&game_path)
-                .output()?;
-            println!("{:?}", output);
-
-            let game_meta = format!("._{game_name}");
-            let game_meta_path = wbfs_folder.join(game_meta);
-            fs::remove_file(game_meta_path)?;
-
-            break;
-        }
-    }
+    let output = Command::new("wit")
+        .arg("copy")
+        .arg(&game)
+        .arg(&path)
+        .output()?;
+    println!("{:?}", output);
 
     Ok(())
 }
