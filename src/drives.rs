@@ -45,7 +45,7 @@ pub fn list() -> Result<ModelRc<Drive>> {
 
                 let info: DiskutilInfo = plist::from_bytes(&output.stdout).unwrap();
 
-                format!("/dev/{}", info.device_node)
+                info.device_node
             } else {
                 mount_point.clone()
             };
