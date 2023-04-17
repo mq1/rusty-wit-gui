@@ -120,7 +120,11 @@ pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>
         .show();
 
     if yes {
-        fs::remove_file(game.path.as_str())?;
+        let output = Command::new("wit")
+            .arg("remove")
+            .arg(game.path.as_str())
+            .output()?;
+        println!("{:?}", output);
     }
 
     get_games(drive_mount_point)
