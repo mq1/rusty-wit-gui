@@ -75,7 +75,9 @@ pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
         .arg("copy")
         .arg(&game)
         .arg(&path)
-        .arg("--auto-split")
+        .arg("--split")
+        .arg("--split-size")
+        .arg("4G-32K")
         .output()?;
     println!("{:?}", output);
 
