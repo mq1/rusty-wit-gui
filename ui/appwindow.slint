@@ -7,7 +7,6 @@ export struct Drive {
     name: string,
     total_space: string,
     available_space: string,
-    path: string,
     mount_point: string,
 }
 
@@ -59,13 +58,6 @@ export component AppWindow inherits Window {
                     Text {
                         text: drive.name + " (" + drive.available_space + " / " + drive.total_space + " GiB)";
                         horizontal-stretch: 1;
-                    }
-                    Button {
-                        text: "Format";
-                        horizontal-stretch: 0;
-                        clicked => {
-                            format-drive(drive);
-                        }
                     }
                     Button {
                         text: "Open";
