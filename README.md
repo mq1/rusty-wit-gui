@@ -6,7 +6,7 @@
 
 ❤️ This program works thanks to [Wiimm](https://github.com/Wiimm)'s tools!
 
-## ⤵️ Downloading
+## ✨ Downloading
 
 ### Prebuilt executable (recommended)
 
