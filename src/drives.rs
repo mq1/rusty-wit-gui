@@ -120,7 +120,7 @@ pub fn format(drive: &Drive) -> Result<()> {
         } else {
             MessageDialog::new()
                 .set_title("Not implemented")
-                .set_description("This feature is only available on macOS")
+                .set_description("This feature is currently only available on macOS")
                 .show();
         }
     }
