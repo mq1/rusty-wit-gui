@@ -17,7 +17,3 @@ ureq = "2.6"
 
 [build-dependencies]
 slint-build = "1.0"
-
-[package.metadata.bundle]
-identifier = "eu.mq1.rusty-wit-gui"
-copyright = "2023 Manuel Quarneti"
