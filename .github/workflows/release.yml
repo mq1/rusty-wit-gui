@@ -1,0 +1,64 @@
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target x86_64-apple-darwin --release
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target aarch64-apple-darwin --release
+      - run: |
+          lipo target/x86_64-apple-darwin/release/rusty-wit-gui target/aarch64-apple-darwin/release/rusty-wit-gui -create -output rusty-wit-gui
+          tar czf rusty-wit-gui-${{github.ref_name}}-macos.tar.gz rusty-wit-gui
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: rusty-wit-gui-${{github.ref_name}}-macos.dmg
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - run: tar czf rusty-wit-gui-${{github.ref_name}}-linux.tar.gz --directory=target/release rusty-wit-gui
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: rusty-wit-gui-${{github.ref_name}}-linux.tar.gz
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - run: Compress-Archive ./target/release/rusty-wit-gui.exe ./rusty-wit-gui-${{github.ref_name}}-windows.zip
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: rusty-wit-gui-${{github.ref_name}}-windows.zip
