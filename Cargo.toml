@@ -15,6 +15,7 @@ tempfile = "3"
 plist = "1"
 sysinfo = "0.28"
 rust-ini = "0.18"
+ureq = "2.6"
 
 [build-dependencies]
 slint-build = "1.0"
