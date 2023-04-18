@@ -6,6 +6,22 @@
 
 ❤️ This program works thanks to [Wiimm](https://github.com/Wiimm)'s tools!
 
+## ⤵️ Downloading
+
+### Prebuilt executable (recommended)
+
+Just grab the [latest release](https://github.com/mq1/rusty-wit-gui/releases/latest) for your platform
+
+### From source
+
+```sh
+git clone https://github.com/mq1/rusty-wit-gui.git
+cd rusty-wit-gui
+cargo build --release
+```
+
+The executable will be located at target/release/rusty-wit-gui
+
 ## 💾 Setting up the drive
 
 ⚠️ Obviously this will delete ALL data on the device
