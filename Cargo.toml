@@ -1,6 +1,6 @@
 [package]
 name = "rusty-wit-gui"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Manuel Quarneti <hi@mq1.eu>"]
 edition = "2021"
 build = "build.rs"
