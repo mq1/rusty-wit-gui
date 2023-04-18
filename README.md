@@ -1,6 +1,6 @@
 # 🦀 rusty-wit-gui
 
-🔧 A simple WBFS Tool using WIT
+🔧 A simple WBFS manager using WIT
 
 ⤵️ This program automatically downloads WIT from https://wit.wiimm.de/
 
