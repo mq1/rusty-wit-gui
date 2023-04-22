@@ -2579,12 +2579,15 @@ name = "rusty-wit-gui"
 version = "0.1.3"
 dependencies = [
  "anyhow",
+ "flate2",
  "rfd",
  "rust-ini",
  "slint",
  "slint-build",
  "sysinfo",
+ "tar",
  "ureq",
+ "zip",
 ]
 
 [[package]]
@@ -3854,6 +3857,18 @@ dependencies = [
  "dlib",
  "once_cell",
  "pkg-config",
+]
+
+[[package]]
+name = "zip"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0445d0fbc924bb93539b4316c11afb121ea39296f99a3c4c9edad09e3658cdef"
+dependencies = [
+ "byteorder",
+ "crc32fast",
+ "crossbeam-utils",
+ "flate2",
 ]
 
 [[package]]

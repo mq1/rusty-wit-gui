@@ -13,7 +13,10 @@ anyhow = "1.0"
 rfd = "0.11"
 sysinfo = "0.28"
 rust-ini = "0.18"
-ureq = { version = "2.6", default-features = false, features = ["tls"] }
+ureq = "2.6"
+flate2 = "1.0"
+tar = "0.4"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 slint-build = "1.0"

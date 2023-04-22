@@ -6,10 +6,11 @@ use crate::{AppWindow, Game};
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::Command, io::{Read, Cursor},
 };
 
 use anyhow::Result;
+use flate2::bufread::GzDecoder;
 use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
 use slint::{ModelRc, VecModel};
@@ -23,7 +24,6 @@ pub fn download_wit(drive_mount_point: &str, ui: &slint::Weak<AppWindow>) -> Res
         "wit-v3.04a-r8427-x86_64.tar.gz"
     };
 
-    let download_path = Path::new(drive_mount_point).join(file_name);
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
 
     let resp = ureq::get(&download_url).call()?;
@@ -65,26 +65,16 @@ pub fn download_wit(drive_mount_point: &str, ui: &slint::Weak<AppWindow>) -> Res
     }
 
     buffer.truncate(buf_len);
-    fs::write(&download_path, buffer)?;
 
     if cfg!(target_family = "unix") {
-        let output = Command::new("tar")
-            .arg("xzf")
-            .arg(&download_path)
-            .arg("-C")
-            .arg(drive_mount_point)
-            .output()?;
-        println!("{:?}", output);
+        let d = GzDecoder::new(&buffer[..]);
+        let mut a = tar::Archive::new(d);
+        a.unpack(drive_mount_point)?;
     } else {
-        let output = Command::new("powershell")
-            .arg("Expand-Archive")
-            .arg(&download_path)
-            .arg(drive_mount_point)
-            .output()?;
-        println!("{:?}", output);
+        let c = Cursor::new(buffer);
+        let mut a = zip::ZipArchive::new(c)?;
+        a.extract(drive_mount_point)?;
     }
-
-    fs::remove_file(&download_path)?;
 
     Ok(())
 }
