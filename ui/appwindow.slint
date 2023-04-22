@@ -31,6 +31,7 @@ export component AppWindow inherits Window {
     in-out property <[Game]> games: [];
     in-out property <int> current-progress: 0;
     in-out property <int> max-progress: 0;
+    in-out property <string> progress-text: "";
     callback open-drive(Drive);
     callback format-drive(Drive);
     callback add-games(Drive);
@@ -120,7 +121,7 @@ export component AppWindow inherits Window {
         }
     }
 
-    if view == "adding-games" : adding-games-view := VerticalLayout {
+    if view == "progress" : progress-view := VerticalLayout {
         alignment: center;
         spacing: 8px;
 
@@ -128,7 +129,7 @@ export component AppWindow inherits Window {
             alignment: center;
 
             Text {
-                text: "Adding game " + current-progress + "/" + max-progress;
+                text: progress-text;
                 font-size: 32px;
             }
         }

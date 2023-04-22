@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::Game;
+use crate::{AppWindow, Game};
 
 use std::{
-    fs::{self, File},
+    fs,
     path::{Path, PathBuf},
-    process::Command, io,
+    process::Command,
 };
 
 use anyhow::Result;
@@ -14,7 +14,7 @@ use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
 use slint::{ModelRc, VecModel};
 
-pub fn download_wit(drive_mount_point: &str) -> Result<()> {
+pub fn download_wit(drive_mount_point: &str, ui: &slint::Weak<AppWindow>) -> Result<()> {
     let file_name = if cfg!(target_os = "macos") {
         "wit-v3.04a-r8427-mac.tar.gz"
     } else if cfg!(target_os = "windows") {
@@ -26,9 +26,46 @@ pub fn download_wit(drive_mount_point: &str) -> Result<()> {
     let download_path = Path::new(drive_mount_point).join(file_name);
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
 
-    let mut body = ureq::get(&download_url).call()?.into_reader();
-    let mut file = File::create(&download_path)?;
-    io::copy(&mut body, &mut file)?;
+    let resp = ureq::get(&download_url).call()?;
+    let expected_len = match resp.header("Content-Length") {
+        Some(header) => header.parse()?,
+        None => 0usize,
+    };
+
+    let mut buf_len = 0usize;
+    let mut buffer = Vec::<u8>::with_capacity(expected_len);
+    let mut reader = resp.into_reader();
+
+    let handle_weak = ui.clone();
+    handle_weak
+        .upgrade_in_event_loop(move |handle_weak| {
+            handle_weak.set_view("progress".into());
+        })
+        .unwrap();
+
+    loop {
+        buffer.extend_from_slice(&[0u8; 1024]);
+        let chunk = &mut buffer.as_mut_slice()[buf_len..buf_len + 1024];
+        let read_bytes = reader.read(chunk).expect("error reading stream");
+        buf_len += read_bytes;
+
+        let percent = (buf_len as f32 / expected_len as f32) * 100.0;
+        let text = format!("Downloading WIT: {:.2}%", percent);
+
+        let handle_weak = ui.clone();
+        handle_weak
+            .upgrade_in_event_loop(move |handle_weak| {
+                handle_weak.set_progress_text(text.into());
+            })
+            .unwrap();
+
+        if read_bytes == 0 {
+            break;
+        }
+    }
+
+    buffer.truncate(buf_len);
+    fs::write(&download_path, buffer)?;
 
     if cfg!(target_family = "unix") {
         let output = Command::new("tar")
@@ -77,9 +114,6 @@ pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
     }
 
     let wit_path = get_wit_path(drive_mount_point)?;
-    if !wit_path.exists() {
-        download_wit(drive_mount_point)?;
-    }
 
     let output = Command::new(wit_path)
         .arg("list")

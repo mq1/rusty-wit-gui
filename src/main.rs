@@ -21,12 +21,26 @@ fn main() -> Result<()> {
 
     let ui_handle = ui.as_weak();
     ui.on_open_drive(move |drive| {
-        let ui = ui_handle.unwrap();
-        let games = util::get_games(&drive.mount_point);
+        let ui_handle = ui_handle.clone();
 
-        ui.set_games(games.unwrap());
-        ui.set_selected_drive(drive);
-        ui.set_view("games".into());
+        thread::spawn(move || {
+            let wit_path = util::get_wit_path(&drive.mount_point).unwrap();
+
+            if !wit_path.exists() {
+                util::download_wit(&drive.mount_point, &ui_handle).unwrap();
+            }
+
+            let handle_weak = ui_handle.clone();
+            handle_weak
+                .upgrade_in_event_loop(move |handle_weak| {
+                    let games: slint::ModelRc<Game> = util::get_games(&drive.mount_point).unwrap();
+
+                    handle_weak.set_games(games);
+                    handle_weak.set_selected_drive(drive);
+                    handle_weak.set_view("games".into());
+                })
+                .unwrap();
+        });
     });
 
     let ui_handle = ui.as_weak();
