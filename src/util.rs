@@ -1,20 +1,18 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::Game;
-
 use std::{
     fs::{self, File},
+    io,
     path::{Path, PathBuf},
-    process::Command, io,
+    process::Command,
 };
 
 use anyhow::Result;
 use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
-use slint::{ModelRc, VecModel};
 
-pub fn download_wit(drive_mount_point: &str) -> Result<()> {
+pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
     let file_name = if cfg!(target_os = "macos") {
         "wit-v3.04a-r8427-mac.tar.gz"
     } else if cfg!(target_os = "windows") {
@@ -23,7 +21,7 @@ pub fn download_wit(drive_mount_point: &str) -> Result<()> {
         "wit-v3.04a-r8427-x86_64.tar.gz"
     };
 
-    let download_path = Path::new(drive_mount_point).join(file_name);
+    let download_path = drive_mount_point.join(file_name);
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
 
     let mut body = ureq::get(&download_url).call()?.into_reader();
@@ -52,13 +50,13 @@ pub fn download_wit(drive_mount_point: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn get_wit_path(drive_mount_point: &str) -> Result<PathBuf> {
+pub fn get_wit_path(drive_mount_point: &Path) -> Result<PathBuf> {
     let base_dir = if cfg!(target_os = "macos") {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-mac")
+        drive_mount_point.join("wit-v3.04a-r8427-mac")
     } else if cfg!(target_os = "windows") {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-cygwin64")
+        drive_mount_point.join("wit-v3.04a-r8427-cygwin64")
     } else {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-x86_64")
+        drive_mount_point.join("wit-v3.04a-r8427-x86_64")
     };
 
     let wit_path = if cfg!(target_family = "unix") {
@@ -70,8 +68,16 @@ pub fn get_wit_path(drive_mount_point: &str) -> Result<PathBuf> {
     Ok(wit_path)
 }
 
-pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
-    let wbfs_folder = Path::new(drive_mount_point).join("wbfs");
+#[derive(Debug, Clone)]
+pub struct Game {
+    pub id: String,
+    pub title: String,
+    pub size: String,
+    pub path: String,
+}
+
+pub fn get_games(drive_mount_point: &Path) -> Result<Vec<Game>> {
+    let wbfs_folder = drive_mount_point.join("wbfs");
     if !wbfs_folder.exists() {
         fs::create_dir(&wbfs_folder)?;
     }
@@ -111,7 +117,7 @@ pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
         }
     }
 
-    Ok(VecModel::from_slice(&games))
+    Ok(games)
 }
 
 pub fn select_games() -> Vec<PathBuf> {
@@ -123,21 +129,21 @@ pub fn select_games() -> Vec<PathBuf> {
     }
 }
 
-pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
+pub fn add_game(drive_mount_point: &Path, game_path: &Path) -> Result<()> {
     let wit_path = get_wit_path(drive_mount_point)?;
 
-    let output = Command::new(&wit_path).arg("id6").arg(&game).output()?;
+    let output = Command::new(&wit_path).arg("id6").arg(game_path).output()?;
     let game_id = String::from_utf8(output.stdout)?.trim().to_string();
 
-    let path = Path::new(drive_mount_point)
+    let path = drive_mount_point
         .join("wbfs")
         .join(game_id)
         .with_extension("wbfs");
 
     let output = Command::new(wit_path)
         .arg("copy")
-        .arg(&game)
-        .arg(&path)
+        .arg(game_path)
+        .arg(path)
         .arg("--split")
         .arg("--split-size")
         .arg("4G-32K")
@@ -147,7 +153,7 @@ pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>> {
+pub fn remove_game(drive_mount_point: &Path, game: &Game) -> Result<()> {
     let yes = MessageDialog::new()
         .set_title("Remove Game")
         .set_description(&format!("Are you sure you want to remove {}?", game.title))
@@ -164,5 +170,5 @@ pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>
         println!("{:?}", output);
     }
 
-    get_games(drive_mount_point)
+    Ok(())
 }

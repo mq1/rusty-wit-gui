@@ -1,5 +1,4 @@
 {
-    "slint.preview.style": "material",
     "rust-analyzer.linkedProjects": [
         "./Cargo.toml"
     ]

@@ -1,86 +1,163 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::thread;
-
-use anyhow::Result;
-
-mod util;
 mod drives;
+mod style;
+mod util;
+mod download;
 
-slint::include_modules!();
+use drives::Drive;
+use iced::{
+    executor,
+    widget::{button, column, container, horizontal_space, pick_list, row, text, vertical_space},
+    Application, Command, Element, Length, Settings, Theme,
+};
+use util::Game;
 
-fn main() -> Result<()> {
-    let ui = AppWindow::new()?;
+pub fn main() -> iced::Result {
+    App::run(Settings::default())
+}
 
-    let window_title = env!("CARGO_PKG_NAME").to_owned() + " v" + env!("CARGO_PKG_VERSION");
-    ui.set_title_(window_title.into());
+#[derive(Debug, Clone)]
+enum View {
+    DriveSelection,
+    Games(Drive),
+}
 
-    let drives = drives::list()?;
-    ui.set_drives(drives);
+struct App {
+    view: View,
+    drives: Vec<Drive>,
+    selected_drive: Option<Drive>,
+}
 
-    let ui_handle = ui.as_weak();
-    ui.on_open_drive(move |drive| {
-        let ui = ui_handle.unwrap();
-        let games = util::get_games(&drive.mount_point);
+#[derive(Debug, Clone)]
+enum Message {
+    DriveSelected(Drive),
+    OpenDrive,
+    DeleteGame(Game),
+}
 
-        ui.set_games(games.unwrap());
-        ui.set_selected_drive(drive);
-        ui.set_view("games".into());
-    });
+impl Application for App {
+    type Message = Message;
+    type Theme = Theme;
+    type Executor = executor::Default;
+    type Flags = ();
 
-    let ui_handle = ui.as_weak();
-    ui.on_add_games(move |drive| {
-        let ui_handle = ui_handle.clone();
+    fn new(_flags: ()) -> (Self, Command<Message>) {
+        let drives = drives::list().unwrap();
+        let first_drive = drives[0].clone();
 
-        thread::spawn(move || {
-            let games = util::select_games();
-            let games_count = games.len() as i32;
+        (
+            Self {
+                view: View::DriveSelection,
+                drives,
+                selected_drive: Some(first_drive),
+            },
+            Command::none(),
+        )
+    }
 
-            let handle_weak = ui_handle.clone();
-            handle_weak
-                .upgrade_in_event_loop(move |handle_weak| {
-                    handle_weak.set_view("adding-games".into());
-                    handle_weak.set_max_progress(games_count);
-                })
-                .unwrap();
+    fn title(&self) -> String {
+        String::from("rusty-wit-gui")
+    }
 
-            for (i, game) in games.iter().enumerate() {
-                let handle_weak = ui_handle.clone();
-                handle_weak
-                    .upgrade_in_event_loop(move |handle_weak| {
-                        handle_weak.set_current_progress(i as i32 + 1);
-                    })
-                    .unwrap();
-                util::add_game(&drive.mount_point, &game).unwrap();
+    fn theme(&self) -> Self::Theme {
+        Theme::Dark
+    }
+
+    fn update(&mut self, message: Self::Message) -> Command<Message> {
+        match message {
+            Message::DriveSelected(drive) => {
+                self.selected_drive = Some(drive);
             }
+            Message::OpenDrive => {
+                if let Some(drive) = &self.selected_drive {
+                    self.view = View::Games(drive.clone());
+                }
+            }
+            Message::DeleteGame(game) => {
+                if let Some(drive) = &self.selected_drive {
+                    util::remove_game(&drive.mount_point, &game).unwrap();
+                    return self.update(Message::OpenDrive);
+                }
+            }
+        }
 
-            let handle_weak = ui_handle.clone();
-            handle_weak
-                .upgrade_in_event_loop(move |handle_weak| {
-                    let games = util::get_games(&drive.mount_point).unwrap();
-                    let drive = drives::refresh(drive).unwrap();
+        Command::none()
+    }
 
-                    handle_weak.set_selected_drive(drive);
-                    handle_weak.set_view("games".into());
-                    handle_weak.set_games(games);
-                })
-                .unwrap();
-        });
-    });
+    fn view(&self) -> Element<Self::Message> {
+        match &self.view {
+            View::DriveSelection => {
+                let pick_list = pick_list(
+                    &self.drives,
+                    self.selected_drive.clone(),
+                    Message::DriveSelected,
+                );
 
-    let ui_handle = ui.as_weak();
-    ui.on_remove_game(move |game| {
-        let ui = ui_handle.unwrap();
-        let drive = ui.get_selected_drive();
+                let open_drive_button = button("Open").on_press(Message::OpenDrive);
 
-        let games = util::remove_game(&drive.mount_point, &game).unwrap();
-        let drive = drives::refresh(drive).unwrap();
+                column![
+                    vertical_space(Length::Fill),
+                    row![
+                        horizontal_space(Length::Fill),
+                        text("Select a drive").size(30),
+                        horizontal_space(Length::Fill)
+                    ],
+                    row![
+                        horizontal_space(Length::Fill),
+                        pick_list,
+                        open_drive_button,
+                        horizontal_space(Length::Fill),
+                    ]
+                    .spacing(10),
+                    vertical_space(Length::Fill),
+                ]
+                .padding(10)
+                .spacing(10)
+                .into()
+            }
+            View::Games(drive) => {
+                let games = util::get_games(&drive.mount_point).unwrap();
 
-        ui.set_selected_drive(drive);
-        ui.set_games(games);
-    });
+                let list = column(
+                    games
+                        .iter()
+                        .map(|game| {
+                            container(
+                                row![
+                                    text(format!(
+                                        "{}: {} ({} GiB)",
+                                        game.id, game.title, game.size
+                                    )),
+                                    horizontal_space(Length::Fill),
+                                    button("Delete").on_press(Message::DeleteGame(game.clone())),
+                                ]
+                                .padding(10),
+                            )
+                            .style(style::card())
+                            .into()
+                        })
+                        .collect(),
+                );
 
-    ui.run()?;
-    Ok(())
+                column![
+                    text(format!("Games on {}", drive.name)).size(30),
+                    list,
+                    vertical_space(Length::Fill),
+                    row![
+                        text(format!(
+                            "Using {}/{} GiB",
+                            drive.available_space, drive.total_space
+                        )),
+                        horizontal_space(Length::Fill),
+                        button("Add game(s)"),
+                    ],
+                ]
+                .padding(10)
+                .spacing(10)
+                .into()
+            }
+        }
+    }
 }
