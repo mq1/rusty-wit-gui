@@ -35,7 +35,7 @@ struct App {
 #[derive(Debug, Clone)]
 enum Message {
     DriveSelected(Drive),
-    OpenDrive(()),
+    OpenDrive,
     AddGames,
     AddingGames((Vec<PathBuf>, usize)),
     DeleteGame(Game),
@@ -74,7 +74,7 @@ impl Application for App {
             Message::DriveSelected(drive) => {
                 self.selected_drive = Some(drive);
             }
-            Message::OpenDrive(_) => {
+            Message::OpenDrive => {
                 if let Some(drive) = &self.selected_drive {
                     let wit_path = util::get_wit_path(&drive.mount_point).unwrap();
                     if !wit_path.exists() {
@@ -83,7 +83,7 @@ impl Application for App {
                         let mount_point = drive.mount_point.clone();
                         return Command::perform(
                             async move { util::download_wit(&mount_point).unwrap() },
-                            Message::OpenDrive,
+                            |_| Message::OpenDrive,
                         );
                     }
 
@@ -126,7 +126,7 @@ impl Application for App {
             Message::DeleteGame(game) => {
                 if let Some(drive) = &self.selected_drive {
                     util::remove_game(&drive.mount_point, &game).unwrap();
-                    return self.update(Message::OpenDrive(()));
+                    return self.update(Message::OpenDrive);
                 }
             }
         }
@@ -143,7 +143,7 @@ impl Application for App {
                     Message::DriveSelected,
                 );
 
-                let open_drive_button = button("Open").on_press(Message::OpenDrive(()));
+                let open_drive_button = button("Open").on_press(Message::OpenDrive);
 
                 column![
                     vertical_space(Length::Fill),
