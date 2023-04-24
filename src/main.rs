@@ -49,6 +49,18 @@ impl Application for App {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let drives = drives::list().unwrap();
+
+        if drives.is_empty() {
+            return (
+                Self {
+                    view: View::Progress(String::from("No drives found")),
+                    drives,
+                    selected_drive: None,
+                },
+                Command::none(),
+            );
+        }
+
         let first_drive = drives[0].clone();
 
         (
