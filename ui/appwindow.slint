@@ -29,8 +29,6 @@ export component AppWindow inherits Window {
     in-out property <[Drive]> drives: [];
     in-out property <Drive> selected-drive;
     in-out property <[Game]> games: [];
-    in-out property <int> current-progress: 0;
-    in-out property <int> max-progress: 0;
     in-out property <string> progress-text: "";
     callback open-drive(Drive);
     callback format-drive(Drive);

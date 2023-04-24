@@ -5,8 +5,8 @@ use std::thread;
 
 use anyhow::Result;
 
-mod util;
 mod drives;
+mod util;
 
 slint::include_modules!();
 
@@ -54,8 +54,7 @@ fn main() -> Result<()> {
             let handle_weak = ui_handle.clone();
             handle_weak
                 .upgrade_in_event_loop(move |handle_weak| {
-                    handle_weak.set_view("adding-games".into());
-                    handle_weak.set_max_progress(games_count);
+                    handle_weak.set_view("progress".into());
                 })
                 .unwrap();
 
@@ -63,7 +62,8 @@ fn main() -> Result<()> {
                 let handle_weak = ui_handle.clone();
                 handle_weak
                     .upgrade_in_event_loop(move |handle_weak| {
-                        handle_weak.set_current_progress(i as i32 + 1);
+                        let text = format!("Adding game {}/{}", i + 1, games_count);
+                        handle_weak.set_progress_text(text.into());
                     })
                     .unwrap();
                 util::add_game(&drive.mount_point, &game).unwrap();
