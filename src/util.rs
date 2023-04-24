@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use std::{
-    fs::{self, File},
-    io,
+    fs,
+    io::{BufReader, Cursor, Read},
     path::{Path, PathBuf},
     process::Command,
 };
 
 use anyhow::Result;
+use flate2::bufread::GzDecoder;
 use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
+use zip::ZipArchive;
 
 pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
     let file_name = if cfg!(target_os = "macos") {
@@ -21,31 +23,24 @@ pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
         "wit-v3.04a-r8427-x86_64.tar.gz"
     };
 
-    let download_path = drive_mount_point.join(file_name);
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
-
-    let mut body = ureq::get(&download_url).call()?.into_reader();
-    let mut file = File::create(&download_path)?;
-    io::copy(&mut body, &mut file)?;
+    let resp = ureq::get(&download_url).call()?;
 
     if cfg!(target_family = "unix") {
-        let output = Command::new("tar")
-            .arg("xzf")
-            .arg(&download_path)
-            .arg("-C")
-            .arg(drive_mount_point)
-            .output()?;
-        println!("{:?}", output);
+        let reader = BufReader::new(resp.into_reader());
+        let d = GzDecoder::new(reader);
+        let mut a = tar::Archive::new(d);
+        a.unpack(drive_mount_point)?;
     } else {
-        let output = Command::new("powershell")
-            .arg("Expand-Archive")
-            .arg(&download_path)
-            .arg(drive_mount_point)
-            .output()?;
-        println!("{:?}", output);
-    }
+        let size = resp.header("Content-Length").unwrap().parse::<usize>()?;
+        let mut reader = resp.into_reader();
+        let mut cache = Vec::with_capacity(size);
+        reader.read_to_end(&mut cache)?;
 
-    fs::remove_file(&download_path)?;
+        let reader = Cursor::new(cache);
+        let mut a = ZipArchive::new(reader)?;
+        a.extract(drive_mount_point)?;
+    }
 
     Ok(())
 }
@@ -83,9 +78,6 @@ pub fn get_games(drive_mount_point: &Path) -> Result<Vec<Game>> {
     }
 
     let wit_path = get_wit_path(drive_mount_point)?;
-    if !wit_path.exists() {
-        download_wit(drive_mount_point)?;
-    }
 
     let output = Command::new(wit_path)
         .arg("list")

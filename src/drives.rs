@@ -3,7 +3,7 @@
 
 use std::{fmt, path::PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use sysinfo::{DiskExt, System, SystemExt};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,13 +48,4 @@ pub fn list() -> Result<Vec<Drive>> {
         .collect::<Vec<_>>();
 
     Ok(drives)
-}
-
-pub fn refresh(drive: Drive) -> Result<Drive> {
-    let drive = list()?
-        .into_iter()
-        .find(|d| d.mount_point == drive.mount_point)
-        .ok_or_else(|| anyhow!("Drive not found"))?;
-
-    Ok(drive)
 }

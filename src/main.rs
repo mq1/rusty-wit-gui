@@ -4,7 +4,8 @@
 mod drives;
 mod style;
 mod util;
-mod download;
+
+use std::path::PathBuf;
 
 use drives::Drive;
 use iced::{
@@ -22,6 +23,7 @@ pub fn main() -> iced::Result {
 enum View {
     DriveSelection,
     Games(Drive),
+    Progress(String),
 }
 
 struct App {
@@ -33,7 +35,9 @@ struct App {
 #[derive(Debug, Clone)]
 enum Message {
     DriveSelected(Drive),
-    OpenDrive,
+    OpenDrive(()),
+    AddGames,
+    AddingGames((Vec<PathBuf>, usize)),
     DeleteGame(Game),
 }
 
@@ -70,15 +74,59 @@ impl Application for App {
             Message::DriveSelected(drive) => {
                 self.selected_drive = Some(drive);
             }
-            Message::OpenDrive => {
+            Message::OpenDrive(_) => {
                 if let Some(drive) = &self.selected_drive {
+                    let wit_path = util::get_wit_path(&drive.mount_point).unwrap();
+                    if !wit_path.exists() {
+                        self.view = View::Progress(String::from("Downloading wit..."));
+
+                        let mount_point = drive.mount_point.clone();
+                        return Command::perform(
+                            async move { util::download_wit(&mount_point).unwrap() },
+                            Message::OpenDrive,
+                        );
+                    }
+
                     self.view = View::Games(drive.clone());
+                }
+            }
+            Message::AddGames => {
+                self.view = View::Progress(String::from("Adding games..."));
+
+                return Command::perform(
+                    async {
+                        let games = util::select_games();
+
+                        (games, 0)
+                    },
+                    Message::AddingGames,
+                );
+            }
+            Message::AddingGames((games, index)) => {
+                let drive = self.selected_drive.as_ref().unwrap().to_owned();
+                let len = games.len();
+
+                if index == len {
+                    self.view = View::Games(drive);
+                    return Command::none();
+                } else {
+                    let text = format!("Adding game {} of {}", index + 1, len);
+                    self.view = View::Progress(text);
+
+                    return Command::perform(
+                        async move {
+                            util::add_game(&drive.mount_point, &games[index]).unwrap();
+
+                            (games, index + 1)
+                        },
+                        Message::AddingGames,
+                    );
                 }
             }
             Message::DeleteGame(game) => {
                 if let Some(drive) = &self.selected_drive {
                     util::remove_game(&drive.mount_point, &game).unwrap();
-                    return self.update(Message::OpenDrive);
+                    return self.update(Message::OpenDrive(()));
                 }
             }
         }
@@ -95,7 +143,7 @@ impl Application for App {
                     Message::DriveSelected,
                 );
 
-                let open_drive_button = button("Open").on_press(Message::OpenDrive);
+                let open_drive_button = button("Open").on_press(Message::OpenDrive(()));
 
                 column![
                     vertical_space(Length::Fill),
@@ -151,13 +199,25 @@ impl Application for App {
                             drive.available_space, drive.total_space
                         )),
                         horizontal_space(Length::Fill),
-                        button("Add game(s)"),
+                        button("Add game(s)").on_press(Message::AddGames),
                     ],
                 ]
                 .padding(10)
                 .spacing(10)
                 .into()
             }
+            View::Progress(progress) => column![
+                vertical_space(Length::Fill),
+                row![
+                    horizontal_space(Length::Fill),
+                    text(progress).size(30),
+                    horizontal_space(Length::Fill)
+                ],
+                vertical_space(Length::Fill),
+            ]
+            .padding(10)
+            .spacing(10)
+            .into(),
         }
     }
 }
