@@ -1,21 +1,20 @@
 // SPDX-FileCopyrightText: 2023 Manuel Quarneti <hi@mq1.eu>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::{AppWindow, Game};
-
 use std::{
     fs,
+    io::{BufReader, Cursor, Read},
     path::{Path, PathBuf},
-    process::Command, io::{Read, Cursor},
+    process::Command,
 };
 
 use anyhow::Result;
 use flate2::bufread::GzDecoder;
 use ini::Ini;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
-use slint::{ModelRc, VecModel};
+use zip::ZipArchive;
 
-pub fn download_wit(drive_mount_point: &str, ui: &slint::Weak<AppWindow>) -> Result<()> {
+pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
     let file_name = if cfg!(target_os = "macos") {
         "wit-v3.04a-r8427-mac.tar.gz"
     } else if cfg!(target_os = "windows") {
@@ -25,67 +24,34 @@ pub fn download_wit(drive_mount_point: &str, ui: &slint::Weak<AppWindow>) -> Res
     };
 
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
-
     let resp = ureq::get(&download_url).call()?;
-    let expected_len = match resp.header("Content-Length") {
-        Some(header) => header.parse()?,
-        None => 0usize,
-    };
-
-    let mut buf_len = 0usize;
-    let mut buffer = Vec::<u8>::with_capacity(expected_len);
-    let mut reader = resp.into_reader();
-
-    let handle_weak = ui.clone();
-    handle_weak
-        .upgrade_in_event_loop(move |handle_weak| {
-            handle_weak.set_view("progress".into());
-        })
-        .unwrap();
-
-    loop {
-        buffer.extend_from_slice(&[0u8; 1024]);
-        let chunk = &mut buffer.as_mut_slice()[buf_len..buf_len + 1024];
-        let read_bytes = reader.read(chunk).expect("error reading stream");
-        buf_len += read_bytes;
-
-        let percent = (buf_len as f32 / expected_len as f32) * 100.0;
-        let text = format!("Downloading WIT: {:.2}%", percent);
-
-        let handle_weak = ui.clone();
-        handle_weak
-            .upgrade_in_event_loop(move |handle_weak| {
-                handle_weak.set_progress_text(text.into());
-            })
-            .unwrap();
-
-        if read_bytes == 0 {
-            break;
-        }
-    }
-
-    buffer.truncate(buf_len);
 
     if cfg!(target_family = "unix") {
-        let d = GzDecoder::new(&buffer[..]);
+        let reader = BufReader::new(resp.into_reader());
+        let d = GzDecoder::new(reader);
         let mut a = tar::Archive::new(d);
         a.unpack(drive_mount_point)?;
     } else {
-        let c = Cursor::new(buffer);
-        let mut a = zip::ZipArchive::new(c)?;
+        let size = resp.header("Content-Length").unwrap().parse::<usize>()?;
+        let mut reader = resp.into_reader();
+        let mut cache = Vec::with_capacity(size);
+        reader.read_to_end(&mut cache)?;
+
+        let reader = Cursor::new(cache);
+        let mut a = ZipArchive::new(reader)?;
         a.extract(drive_mount_point)?;
     }
 
     Ok(())
 }
 
-pub fn get_wit_path(drive_mount_point: &str) -> Result<PathBuf> {
+pub fn get_wit_path(drive_mount_point: &Path) -> Result<PathBuf> {
     let base_dir = if cfg!(target_os = "macos") {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-mac")
+        drive_mount_point.join("wit-v3.04a-r8427-mac")
     } else if cfg!(target_os = "windows") {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-cygwin64")
+        drive_mount_point.join("wit-v3.04a-r8427-cygwin64")
     } else {
-        Path::new(drive_mount_point).join("wit-v3.04a-r8427-x86_64")
+        drive_mount_point.join("wit-v3.04a-r8427-x86_64")
     };
 
     let wit_path = if cfg!(target_family = "unix") {
@@ -97,8 +63,16 @@ pub fn get_wit_path(drive_mount_point: &str) -> Result<PathBuf> {
     Ok(wit_path)
 }
 
-pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
-    let wbfs_folder = Path::new(drive_mount_point).join("wbfs");
+#[derive(Debug, Clone)]
+pub struct Game {
+    pub id: String,
+    pub title: String,
+    pub size: String,
+    pub path: String,
+}
+
+pub fn get_games(drive_mount_point: &Path) -> Result<Vec<Game>> {
+    let wbfs_folder = drive_mount_point.join("wbfs");
     if !wbfs_folder.exists() {
         fs::create_dir(&wbfs_folder)?;
     }
@@ -135,7 +109,7 @@ pub fn get_games(drive_mount_point: &str) -> Result<ModelRc<Game>> {
         }
     }
 
-    Ok(VecModel::from_slice(&games))
+    Ok(games)
 }
 
 pub fn select_games() -> Vec<PathBuf> {
@@ -147,21 +121,21 @@ pub fn select_games() -> Vec<PathBuf> {
     }
 }
 
-pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
+pub fn add_game(drive_mount_point: &Path, game_path: &Path) -> Result<()> {
     let wit_path = get_wit_path(drive_mount_point)?;
 
-    let output = Command::new(&wit_path).arg("id6").arg(&game).output()?;
+    let output = Command::new(&wit_path).arg("id6").arg(game_path).output()?;
     let game_id = String::from_utf8(output.stdout)?.trim().to_string();
 
-    let path = Path::new(drive_mount_point)
+    let path = drive_mount_point
         .join("wbfs")
         .join(game_id)
         .with_extension("wbfs");
 
     let output = Command::new(wit_path)
         .arg("copy")
-        .arg(&game)
-        .arg(&path)
+        .arg(game_path)
+        .arg(path)
         .arg("--split")
         .arg("--split-size")
         .arg("4G-32K")
@@ -171,7 +145,7 @@ pub fn add_game(drive_mount_point: &str, game: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>> {
+pub fn remove_game(drive_mount_point: &Path, game: &Game) -> Result<()> {
     let yes = MessageDialog::new()
         .set_title("Remove Game")
         .set_description(&format!("Are you sure you want to remove {}?", game.title))
@@ -188,5 +162,5 @@ pub fn remove_game(drive_mount_point: &str, game: &Game) -> Result<ModelRc<Game>
         println!("{:?}", output);
     }
 
-    get_games(drive_mount_point)
+    Ok(())
 }

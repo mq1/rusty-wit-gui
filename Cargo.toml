@@ -3,12 +3,12 @@ name = "rusty-wit-gui"
 version = "0.1.3"
 authors = ["Manuel Quarneti <hi@mq1.eu>"]
 edition = "2021"
-build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-slint = "1.0"
+iced = { version = "0.9", default-features = false, features = ["glow"] }
+iced_native = "0.10"
 anyhow = "1.0"
 rfd = "0.11"
 sysinfo = "0.28"
@@ -17,9 +17,6 @@ ureq = "2.6"
 flate2 = "1.0"
 tar = "0.4"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
-
-[build-dependencies]
-slint-build = "1.0"
 
 [profile.release]
 strip = true
