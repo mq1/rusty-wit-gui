@@ -13,6 +13,7 @@ use iced::{
     widget::{button, column, container, horizontal_space, pick_list, row, text, vertical_space},
     Application, Command, Element, Length, Settings, Theme,
 };
+use iced_aw::Spinner;
 use util::Game;
 
 pub fn main() -> iced::Result {
@@ -50,24 +51,13 @@ impl Application for App {
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let drives = drives::list().unwrap();
 
-        if drives.is_empty() {
-            return (
-                Self {
-                    view: View::Progress(String::from("No drives found")),
-                    drives,
-                    selected_drive: None,
-                },
-                Command::none(),
-            );
-        }
-
-        let first_drive = drives[0].clone();
+        let first_drive = drives.get(0).cloned();
 
         (
             Self {
                 view: View::DriveSelection,
                 drives,
-                selected_drive: Some(first_drive),
+                selected_drive: first_drive,
             },
             Command::none(),
         )
@@ -148,35 +138,43 @@ impl Application for App {
 
     fn view(&self) -> Element<Self::Message> {
         match &self.view {
-            View::DriveSelection => {
-                let pick_list = pick_list(
-                    &self.drives,
-                    self.selected_drive.clone(),
-                    Message::DriveSelected,
-                );
+            View::DriveSelection => match &self.selected_drive {
+                Some(drive) => {
+                    let pick_list =
+                        pick_list(&self.drives, Some(drive.clone()), Message::DriveSelected);
 
-                let open_drive_button = button("Open").on_press(Message::OpenDrive);
+                    let open_drive_button = button("Open").on_press(Message::OpenDrive);
 
-                column![
+                    column![
+                        vertical_space(Length::Fill),
+                        row![
+                            horizontal_space(Length::Fill),
+                            text("Select a drive").size(30),
+                            horizontal_space(Length::Fill)
+                        ],
+                        row![
+                            horizontal_space(Length::Fill),
+                            pick_list,
+                            open_drive_button,
+                            horizontal_space(Length::Fill),
+                        ]
+                        .spacing(10),
+                        vertical_space(Length::Fill),
+                    ]
+                    .spacing(10)
+                    .into()
+                }
+                None => column![
                     vertical_space(Length::Fill),
                     row![
                         horizontal_space(Length::Fill),
-                        text("Select a drive").size(30),
+                        text("No drives found").size(30),
                         horizontal_space(Length::Fill)
                     ],
-                    row![
-                        horizontal_space(Length::Fill),
-                        pick_list,
-                        open_drive_button,
-                        horizontal_space(Length::Fill),
-                    ]
-                    .spacing(10),
                     vertical_space(Length::Fill),
                 ]
-                .padding(10)
-                .spacing(10)
-                .into()
-            }
+                .into(),
+            },
             View::Games(drive) => {
                 let games = util::get_games(&drive.mount_point).unwrap();
 
@@ -223,6 +221,11 @@ impl Application for App {
                 row![
                     horizontal_space(Length::Fill),
                     text(progress).size(30),
+                    horizontal_space(Length::Fill)
+                ],
+                row![
+                    horizontal_space(Length::Fill),
+                    Spinner::new(),
                     horizontal_space(Length::Fill)
                 ],
                 vertical_space(Length::Fill),

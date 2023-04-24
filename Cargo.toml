@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 iced = { version = "0.9", default-features = false, features = ["glow"] }
+iced_aw = { version = "0.5", default-features = false, features = ["spinner", "glow"] }
 anyhow = "1.0"
 rfd = "0.11"
 sysinfo = "0.28"
