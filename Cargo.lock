@@ -2035,7 +2035,6 @@ dependencies = [
  "anyhow",
  "flate2",
  "iced",
- "iced_native",
  "rfd",
  "rust-ini",
  "sysinfo",

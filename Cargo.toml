@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 iced = { version = "0.9", default-features = false, features = ["glow"] }
-iced_native = "0.10"
 anyhow = "1.0"
 rfd = "0.11"
 sysinfo = "0.28"
