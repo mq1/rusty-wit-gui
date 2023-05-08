@@ -11,8 +11,8 @@ iced = { version = "0.9", default-features = false, features = ["glow"] }
 iced_aw = { version = "0.5", default-features = false, features = ["spinner", "glow"] }
 anyhow = "1.0"
 rfd = "0.11"
-sysinfo = "0.28"
-rust-ini = "0.18"
+sysinfo = "0.29"
+rust-ini = "0.19"
 ureq = "2.6"
 flate2 = "1.0"
 tar = "0.4"
