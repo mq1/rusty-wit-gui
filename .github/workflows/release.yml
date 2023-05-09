@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-latest-xl
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -36,7 +36,7 @@ jobs:
         with:
           files: rusty-wit-gui-${{github.ref_name}}-macos.tar.gz
   build-ubuntu:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev
