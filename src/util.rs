@@ -6,12 +6,15 @@ use std::{
     io::{BufReader, Cursor, Read},
     path::{Path, PathBuf},
     process::Command,
+    sync::Arc,
 };
 
 use anyhow::Result;
 use flate2::bufread::GzDecoder;
 use ini::Ini;
+use native_tls::TlsConnector;
 use rfd::{FileDialog, MessageButtons, MessageDialog};
+use ureq::AgentBuilder;
 use zip::ZipArchive;
 
 pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
@@ -24,7 +27,10 @@ pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
     };
 
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
-    let resp = ureq::get(&download_url).call()?;
+    let agent = AgentBuilder::new()
+        .tls_connector(Arc::new(TlsConnector::new()?))
+        .build();
+    let resp = agent.get(&download_url).call()?;
 
     if cfg!(target_family = "unix") {
         let reader = BufReader::new(resp.into_reader());
