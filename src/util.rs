@@ -19,11 +19,11 @@ use zip::ZipArchive;
 
 pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
     let file_name = if cfg!(target_os = "macos") {
-        "wit-v3.04a-r8427-mac.tar.gz"
+        "wit-v3.05a-r8638-mac.tar.gz"
     } else if cfg!(target_os = "windows") {
-        "wit-v3.04a-r8427-cygwin64.zip"
+        "wit-v3.05a-r8638-cygwin64.zip"
     } else {
-        "wit-v3.04a-r8427-x86_64.tar.gz"
+        "wit-v3.05a-r8638-x86_64.tar.gz"
     };
 
     let download_url = format!("https://wit.wiimm.de/download/{file_name}");
@@ -37,6 +37,17 @@ pub fn download_wit(drive_mount_point: &Path) -> Result<()> {
         let d = GzDecoder::new(reader);
         let mut a = tar::Archive::new(d);
         a.unpack(drive_mount_point)?;
+
+        // fix permissions on macos
+        if cfg!(target_os = "macos") {
+            let wit_path = get_wit_path(drive_mount_point)?;
+
+            Command::new("xattr")
+                .arg("-d")
+                .arg("com.apple.quarantine")
+                .arg(&wit_path)
+                .output()?;
+        }
     } else {
         let size = resp.header("Content-Length").unwrap().parse::<usize>()?;
         let mut reader = resp.into_reader();
